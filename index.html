@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<!--
+  数学バトル道場 v1.0
+  ====================
+  【Vercel デプロイ方法】
+  1. このファイルを index.html にリネーム（または vercel.json でルート指定）
+  2. Vercel CLI: vercel --prod  /  もしくは GitHub リポジトリに push して連携
+
+  【動画差し替え方法（Veo生成動画が準備できたら）】
+  1. videos/ フォルダに各状態のmp4を配置
+  2. switchBgVideo() を <video> ソース切り替えに変更
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="description" content="中学数学 中1〜中2 全分野をゲーム感覚で征服！ボスを倒してランクアップ。">
+<title>数学バトル道場</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --panel: #111827;
+    --border: #1e3a5f;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --gold: #ffd700;
+    --green: #00ff88;
+    --red: #ff4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { height: -webkit-fill-available; }
+
+  body {
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* 全体背景グラデーション */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(0,212,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(124,58,237,0.07) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ===== 状態別 CSS 背景 (全画面・固定) ===== */
+  /* Veo動画が準備できたら <video> 要素に差し替え予定 */
+  .scene-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: -1;
+    transition: filter 0.6s ease;
+  }
+  .scene-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(6, 10, 20, 0.72);
+    pointer-events: none;
+  }
+
+  /* タイトル・メニュー：深宇宙ブルー + パープル */
+  .scene-bg.state-title {
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(0,100,255,0.20) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 70%, rgba(120,40,220,0.18) 0%, transparent 55%),
+      linear-gradient(160deg, #06091a 0%, #0a0e24 50%, #12072a 100%);
+    animation: bgFloat 12s ease-in-out infinite alternate;
+  }
+
+  /* 問題中：集中・ダークシアン */
+  .scene-bg.state-quiz {
+    background:
+      radial-gradient(ellipse at 60% 20%, rgba(0,160,200,0.14) 0%, transparent 50%),
+      linear-gradient(160deg, #04080e 0%, #060c18 50%, #04080e 100%);
+    animation: bgFloat 10s ease-in-out infinite alternate;
+  }
+
+  /* 正解：エメラルドグリーン */
+  .scene-bg.state-correct {
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(0,220,100,0.30) 0%, transparent 60%),
+      linear-gradient(160deg, #020e04 0%, #041408 50%, #020e04 100%);
+    animation: bgPop 0.5s ease-out, bgFloat 6s 0.5s ease-in-out infinite alternate;
+  }
+  .scene-bg.state-correct .scene-bg-overlay { background: rgba(4, 18, 8, 0.65); }
+
+  /* 不正解：クリムゾンレッド */
+  .scene-bg.state-wrong {
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(220,30,30,0.30) 0%, transparent 60%),
+      linear-gradient(160deg, #0e0202 0%, #180404 50%, #0e0202 100%);
+    animation: bgShake 0.4s ease-out, bgFloat 6s 0.4s ease-in-out infinite alternate;
+  }
+  .scene-bg.state-wrong .scene-bg-overlay { background: rgba(20, 4, 4, 0.65); }
+
+  /* クリア・ボス撃破：ゴールデン */
+  .scene-bg.state-clear {
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(255,200,0,0.22) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 70%, rgba(255,100,0,0.16) 0%, transparent 50%),
+      linear-gradient(160deg, #0e0c02 0%, #1a1604 50%, #0e0c02 100%);
+    animation: bgFloat 5s ease-in-out infinite alternate;
+  }
+  .scene-bg.state-clear .scene-bg-overlay { background: rgba(16, 14, 2, 0.66); }
+
+  @keyframes bgFloat {
+    0%   { filter: brightness(1); }
+    100% { filter: brightness(1.15); }
+  }
+  @keyframes bgPop {
+    0%   { filter: brightness(2.2); }
+    60%  { filter: brightness(1.4); }
+    100% { filter: brightness(1); }
+  }
+  @keyframes bgShake {
+    0%,100% { transform: translateX(0); }
+    20%     { transform: translateX(-6px); }
+    40%     { transform: translateX(6px); }
+    60%     { transform: translateX(-4px); }
+    80%     { transform: translateX(4px); }
+  }
+
+  /* ===== LAYOUT ===== */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px 16px env(safe-area-inset-bottom, 16px);
+    padding-top: max(16px, env(safe-area-inset-top, 16px));
+  }
+
+  /* ===== HEADER ===== */
+  .hdr {
+    text-align: center;
+    padding: 20px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .hdr h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.3rem, 5vw, 1.9rem);
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,212,255,0.5);
+    letter-spacing: 2px;
+  }
+  .hdr p { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+
+  .mute-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top, 12px));
+    right: max(12px, env(safe-area-inset-right, 12px));
+    z-index: 100;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    min-height: 36px;
+    touch-action: manipulation;
+  }
+  .mute-btn:hover { border-color: var(--accent); }
+  .mute-btn:active { transform: scale(0.96); }
+
+  .back-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top, 12px));
+    left: max(12px, env(safe-area-inset-left, 12px));
+    z-index: 100;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    min-height: 36px;
+    touch-action: manipulation;
+    display: none;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--text); }
+  .back-btn:active { transform: scale(0.96); }
+
+  /* ===== STATS BAR ===== */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .stat-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .stat-box .label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .stat-box .val { font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 700; margin-top: 2px; }
+  .stat-xp .val { color: var(--gold); }
+  .stat-rank .val { color: var(--accent); font-size: 0.68rem; }
+  .stat-combo .val { color: var(--accent2); }
+
+  /* XP BAR */
+  .xp-bar-wrap { margin-bottom: 16px; }
+  .xp-bar-bg { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; height: 10px; overflow: hidden; }
+  .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent3), var(--accent)); border-radius: 8px; transition: width 0.4s ease; }
+  .xp-bar-label { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+
+  /* ===== BOSS AREA ===== */
+  .boss-area {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .boss-emoji { font-size: 3.5rem; display: block; animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  .boss-name { font-family: 'Orbitron', sans-serif; font-size: 1rem; color: var(--accent2); margin: 6px 0 4px; }
+  .boss-desc { font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
+  .boss-hp-bg { background: #1a0a0a; border: 1px solid #3a1a1a; border-radius: 8px; height: 14px; overflow: hidden; }
+  .boss-hp-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff6b35); border-radius: 8px; transition: width 0.5s ease; }
+  .boss-hp-label { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+
+  /* ===== QUIZ AREA ===== */
+  .quiz-area {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .q-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .q-cat {
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+  }
+  .q-num { font-size: 0.75rem; color: var(--muted); }
+  .q-text {
+    font-size: clamp(1rem, 3.5vw, 1.15rem);
+    line-height: 1.75;
+    margin-bottom: 6px;
+    min-height: 56px;
+    white-space: pre-wrap;
+  }
+  .q-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; }
+
+  .ans-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .ans-input {
+    flex: 1;
+    background: #0f1829;
+    border: 2px solid var(--border);
+    color: var(--text);
+    padding: 13px 16px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: border 0.2s;
+    min-height: 48px;
+  }
+  .ans-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,0.1); }
+  .ans-input.ok { border-color: var(--green); background: rgba(0,255,136,0.05); }
+  .ans-input.ng { border-color: var(--red); background: rgba(255,68,68,0.05); }
+
+  .btn {
+    padding: 13px 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+    min-height: 48px;
+    touch-action: manipulation;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent3), var(--accent)); color: white; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,212,255,0.3); }
+  .btn-secondary { background: var(--panel); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-next {
+    background: linear-gradient(135deg, #059669, var(--green));
+    color: #003322;
+    width: 100%;
+    margin-top: 8px;
+    font-size: 0.95rem;
+  }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,255,136,0.2); }
+
+  /* HINT */
+  .hint-area { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .hint-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+    min-height: 36px;
+    touch-action: manipulation;
+  }
+  .hint-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .hint-btn:active { transform: scale(0.97); }
+  .hint-text {
+    margin-top: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(255,215,0,0.08);
+    border: 1px solid rgba(255,215,0,0.2);
+    font-size: 0.85rem;
+    color: var(--gold);
+    display: none;
+    line-height: 1.6;
+  }
+  .hint-text.show { display: block; }
+
+  /* FEEDBACK */
+  .feedback {
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    display: none;
+    line-height: 1.6;
+  }
+  .feedback.ok { background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.3); color: var(--green); display: block; }
+  .feedback.ng { background: rgba(255,68,68,0.08); border: 1px solid rgba(255,68,68,0.3); color: #ff8888; display: block; }
+  .feedback .exp { color: var(--muted); font-size: 0.8rem; margin-top: 6px; }
+
+  /* COMBO FLASH */
+  .combo-flash {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2rem, 8vw, 3rem);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(255,215,0,0.8);
+    pointer-events: none;
+    opacity: 0;
+    z-index: 200;
+    white-space: nowrap;
+  }
+  @keyframes comboAnim {
+    0%   { opacity:1; transform:translate(-50%,-60%) scale(1.3); }
+    80%  { opacity:1; }
+    100% { opacity:0; transform:translate(-50%,-70%) scale(0.9); }
+  }
+
+  /* PROGRESS */
+  .prog-wrap { margin-bottom: 12px; }
+  .prog-bg { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; height: 8px; overflow: hidden; }
+  .prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--gold)); border-radius: 6px; transition: width 0.3s ease; }
+  .prog-label { font-size: 0.7rem; color: var(--muted); margin-top: 4px; text-align: right; }
+
+  /* ===== MENU SCREEN ===== */
+  #menuScreen { padding: 0; }
+
+  .menu-hero {
+    text-align: center;
+    padding: 4px 0 20px;
+  }
+  .menu-hero h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.1rem, 4vw, 1.4rem);
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .menu-hero p { color: var(--muted); font-size: 0.85rem; }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .menu-card {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    min-height: 80px;
+  }
+  .menu-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,212,255,0.15); }
+  .menu-card:active { transform: scale(0.97); }
+  .menu-card.active { border-color: var(--accent); background: rgba(0,212,255,0.08); }
+  .menu-card .mc-emoji { font-size: 1.8rem; margin-bottom: 4px; }
+  .menu-card .mc-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 3px; }
+  .menu-card .mc-cnt { font-size: 0.72rem; color: var(--muted); }
+
+  .btn-start {
+    width: 100%;
+    padding: 18px;
+    font-size: 1.1rem;
+    font-family: 'Orbitron', sans-serif;
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    color: white;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 2px;
+    box-shadow: 0 4px 24px rgba(0,212,255,0.3);
+    transition: all 0.2s;
+    min-height: 56px;
+    touch-action: manipulation;
+  }
+  .btn-start:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,212,255,0.4); }
+  .btn-start:active { transform: scale(0.98); }
+
+  .mode-select { display: flex; gap: 8px; margin-bottom: 16px; }
+  .mode-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    text-align: center;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  .mode-btn.active { border-color: var(--accent2); background: rgba(255,107,53,0.1); color: var(--accent2); }
+  .mode-btn:active { transform: scale(0.97); }
+
+  .sel-label {
+    margin-bottom: 12px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ===== SUMMARY SCREEN ===== */
+  .summary-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .summary-emoji { font-size: 3rem; display: block; margin-bottom: 8px; }
+  .summary-score {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2.5rem, 10vw, 3.5rem);
+    color: var(--gold);
+    font-weight: 900;
+    text-shadow: 0 0 20px rgba(255,215,0,0.4);
+  }
+  .summary-label { color: var(--muted); font-size: 0.85rem; margin: 6px 0 16px; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .result-item { padding: 10px 6px; background: rgba(255,255,255,0.03); border-radius: 10px; }
+  .result-item .ri-val { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; font-weight: 700; }
+  .result-item .ri-label { font-size: 0.68rem; color: var(--muted); margin-top: 3px; }
+
+  .weak-list {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    text-align: left;
+  }
+  .weak-list h3 { font-size: 0.9rem; margin-bottom: 10px; }
+  .weak-item { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem; }
+  .weak-item:last-child { border-bottom: none; }
+  .weak-item .wi-q { color: var(--text); line-height: 1.5; }
+  .weak-item .wi-a { color: var(--green); font-size: 0.78rem; margin-top: 3px; }
+
+  .summary-actions { display: flex; gap: 8px; }
+  .summary-actions .btn { flex: 1; font-size: 0.85rem; }
+
+  /* ===== LEVEL UP OVERLAY ===== */
+  .lvlup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,10,0.88);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+  }
+  .lvlup-box {
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    padding: 40px 32px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(255,215,0,0.3);
+    animation: popIn 0.4s ease;
+    max-width: 320px;
+    width: 90%;
+  }
+  @keyframes popIn { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+  .lvlup-box .lu-emoji { font-size: 4rem; display: block; margin-bottom: 12px; }
+  .lvlup-box h2 { font-family: 'Orbitron', sans-serif; color: var(--gold); font-size: 1.6rem; }
+  .lvlup-box .lu-rank { color: var(--accent); font-size: 1rem; margin: 8px 0 20px; }
+  .lvlup-box .lu-close {
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    color: white;
+    padding: 12px 32px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.95rem;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* ===== SCREEN CONTROL ===== */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 400px) {
+    .menu-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .menu-card { padding: 12px 8px; min-height: 72px; }
+    .menu-card .mc-emoji { font-size: 1.5rem; }
+    .summary-actions { flex-direction: column; }
+    .result-grid { gap: 6px; }
+    .btn-start { padding: 16px; font-size: 1rem; }
+  }
+
+  @media (max-width: 320px) {
+    .stats { gap: 6px; }
+    .stat-box .val { font-size: 0.95rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 状態別 CSS 背景 (全画面) ===== -->
+<!-- Veo動画が準備できたら <video autoplay loop muted playsinline> に差し替え -->
+<div class="scene-bg state-title" id="sceneBg">
+  <div class="scene-bg-overlay"></div>
+</div>
+
+<!-- UI オーバーレイ類 -->
+<button class="back-btn" id="backBtn" onclick="showMenu()">← メニューに戻る</button>
+<button class="mute-btn" id="muteB" onclick="toggleMute()">🔊 音ON</button>
+<div class="combo-flash" id="comboFlash"></div>
+<div class="lvlup-overlay" id="lvlupOverlay">
+  <div class="lvlup-box">
+    <span class="lu-emoji">⭐</span>
+    <h2>LEVEL UP！</h2>
+    <div class="lu-rank" id="luRank">新ランク取得！</div>
+    <button class="lu-close" onclick="closeLvlUp()">続ける！</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hdr">
+    <h1>⚔️ 数学バトル道場</h1>
+    <p>中学数学 ｜ 中1〜中2 全分野制覇</p>
+  </div>
+
+  <!-- ===== タイトル / メニュー画面 ===== -->
+  <div id="menuScreen" class="screen active">
+
+
+    <div class="menu-hero">
+      <h2>数学の力を証明せよ！</h2>
+      <p>ボスを倒して全分野を征服しよう</p>
+    </div>
+
+    <div class="mode-select">
+      <button class="mode-btn active" id="modeAll" onclick="setMode('all')">🎯 全問チャレンジ</button>
+      <button class="mode-btn" id="modeWeak" onclick="setMode('weak')">💢 苦手だけ特訓</button>
+    </div>
+
+    <div class="menu-grid" id="menuGrid"></div>
+    <div class="sel-label" id="selLabel">全分野を選択中</div>
+    <button class="btn-start" onclick="startQuiz()">⚔️ バトル開始！</button>
+  </div>
+
+  <!-- ===== ゲーム画面 ===== -->
+  <div id="quizScreen" class="screen">
+    <div class="stats">
+      <div class="stat-box stat-xp">
+        <div class="label">XP</div>
+        <div class="val" id="xpVal">0</div>
+      </div>
+      <div class="stat-box stat-rank">
+        <div class="label">RANK</div>
+        <div class="val" id="rankVal">見習い</div>
+      </div>
+      <div class="stat-box stat-combo">
+        <div class="label">COMBO</div>
+        <div class="val" id="comboVal">0</div>
+      </div>
+    </div>
+
+    <div class="xp-bar-wrap">
+      <div class="xp-bar-bg"><div class="xp-bar-fill" id="xpBar" style="width:0%"></div></div>
+      <div class="xp-bar-label">
+        <span id="rankName">計算見習い</span>
+        <span id="xpToNext">次まで50XP</span>
+      </div>
+    </div>
+
+    <div class="boss-area">
+      <span class="boss-emoji" id="bossEmoji">🐉</span>
+      <div class="boss-name" id="bossName">ボス名</div>
+      <div class="boss-desc" id="bossDesc">説明</div>
+      <div class="boss-hp-bg"><div class="boss-hp-fill" id="bossHpBar" style="width:100%"></div></div>
+      <div class="boss-hp-label">HP: <span id="bossHpNum">0</span> / <span id="bossHpMax">0</span></div>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-bg"><div class="prog-fill" id="progBar" style="width:0%"></div></div>
+      <div class="prog-label"><span id="progLabel">0/0</span></div>
+    </div>
+
+    <div class="quiz-area">
+      <div class="q-meta">
+        <span class="q-cat" id="qCat">分野</span>
+        <span class="q-num" id="qNum">1/56</span>
+      </div>
+      <div class="q-text" id="qText">問題文</div>
+      <div class="q-sub" id="qSub"></div>
+      <div class="ans-row">
+        <input type="text" class="ans-input" id="ansInput"
+          placeholder="答えを入力して Enter"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          inputmode="decimal">
+        <button class="btn btn-primary" id="checkBtn" onclick="checkAnswer()">決定</button>
+      </div>
+      <div class="hint-area">
+        <button class="hint-btn" onclick="showHint(1)">💡 ヒント1 (-3XP)</button>
+        <button class="hint-btn" onclick="showHint(2)">🔍 ヒント2 (-2XP)</button>
+      </div>
+      <div class="hint-text" id="hint1Text"></div>
+      <div class="hint-text" id="hint2Text"></div>
+      <div class="feedback" id="feedback"></div>
+      <button class="btn btn-next" id="nextBtn" onclick="nextQ()" style="display:none">次の問題へ ▶</button>
+    </div>
+  </div>
+
+  <!-- ===== 結果画面 ===== -->
+  <div id="summaryScreen" class="screen">
+    <div class="summary-box">
+      <span class="summary-emoji" id="sumEmoji">🎉</span>
+      <div class="summary-score" id="sumScore">0点</div>
+      <div class="summary-label" id="sumLabel">クリア！お疲れさまでした</div>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="ri-val" id="sumXP" style="color:var(--gold)">0</div>
+          <div class="ri-label">獲得XP</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-val" id="sumCombo" style="color:var(--accent2)">0</div>
+          <div class="ri-label">最大コンボ</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-val" id="sumTime" style="color:var(--accent)">0秒</div>
+          <div class="ri-label">タイム</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="weak-list" id="weakList"></div>
+
+    <div class="summary-actions">
+      <button class="btn btn-primary" onclick="startReview()">💢 間違い復習</button>
+      <button class="btn btn-secondary" onclick="showMenu()">🏠 メニューへ</button>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ===== 問題データ =====
+var QUESTIONS = [
+  // --- 中1: 正負の数 ---
+  {id:1,cat:"正負の数",gr:"中1",q:"(+3) + (-7) を計算しなさい。",a:"-4",h1:"正の数と負の数をたすとき、絶対値の大きい方の符号になる",h2:"|+3|=3、|-7|=7。差は7-3=4、大きいのは負",exp:"(+3)+(-7) = -(7-3) = -4"},
+  {id:2,cat:"正負の数",gr:"中1",q:"(-5) - (-2) を計算しなさい。",a:"-3",h1:"引く場合は、符号を変えてたし算に変える",h2:"(-5)-(-2) = (-5)+(+2) = ?",exp:"(-5)-(-2) = (-5)+(+2) = -3"},
+  {id:3,cat:"正負の数",gr:"中1",q:"(-4) × (-3) を計算しなさい。",a:"12",h1:"負×負 = 正",h2:"4×3=12、符号は？",exp:"負×負=正なので (-4)×(-3) = +12 = 12"},
+  {id:4,cat:"正負の数",gr:"中1",q:"(-18) ÷ (+3) を計算しなさい。",a:"-6",h1:"負÷正 = 負",h2:"18÷3=6、符号は？",exp:"負÷正=負なので (-18)÷(+3) = -6"},
+  {id:5,cat:"正負の数",gr:"中1",q:"3² - (-2)³ を計算しなさい。",a:"17",h1:"3²=9、(-2)³=?",h2:"(-2)³=(-2)×(-2)×(-2)=?",exp:"3²=9、(-2)³=-8。よって 9-(-8)=9+8=17"},
+  {id:6,cat:"正負の数",gr:"中1",q:"-3²（-(3²) の意味）を計算しなさい。",a:"-9",h1:"-3²は -(3²) という意味",h2:"3²=9 の符号を変えると？",exp:"-3²=-(3²)=-(9)=-9。(-3)²=9とは違う！"},
+  {id:7,cat:"正負の数",gr:"中1",q:"絶対値が5の数をすべて答えなさい。（小さい方先、カンマ区切り）",a:"-5,5",h1:"絶対値とは0からの距離",h2:"負の数と正の数の両方ある",exp:"絶対値が5の数は -5 と 5 の2つ"},
+
+  // --- 中1: 文字と式 ---
+  {id:8,cat:"文字と式",gr:"中1",q:"a=3のとき、4a-5 の値を求めなさい。",a:"7",h1:"aに3を代入する",h2:"4×3-5=?",exp:"4×3-5=12-5=7"},
+  {id:9,cat:"文字と式",gr:"中1",q:"3x + 2x を簡単にしなさい。",a:"5x",h1:"同類項をまとめる",h2:"(3+2)x=?",exp:"3x+2x=(3+2)x=5x"},
+  {id:10,cat:"文字と式",gr:"中1",q:"2(x + 3) を展開しなさい。",a:"2x+6",h1:"分配法則：a(b+c)=ab+ac",h2:"2×x + 2×3 = ?",exp:"2(x+3)=2×x+2×3=2x+6"},
+  {id:11,cat:"文字と式",gr:"中1",q:"4x - 2(x - 3) を簡単にしなさい。",a:"2x+6",h1:"-2を分配してから同類項をまとめる",h2:"4x-2x+6=?",exp:"4x-2(x-3)=4x-2x+6=2x+6"},
+  {id:12,cat:"文字と式",gr:"中1",q:"1辺が a cm の正三角形の周の長さを文字式で表しなさい。",a:"3a",h1:"正三角形の辺は3本",h2:"a×3=?",exp:"正三角形の周 = a×3 = 3a (cm)"},
+
+  // --- 中1: 一次方程式 ---
+  {id:13,cat:"一次方程式",gr:"中1",q:"3x = 12 を解きなさい。（x= の形で）",a:"x=4",h1:"両辺を3で割る",h2:"12÷3=?",exp:"3x=12 → x=12÷3=4"},
+  {id:14,cat:"一次方程式",gr:"中1",q:"2x + 5 = 11 を解きなさい。",a:"x=3",h1:"まず5を右辺に移項する",h2:"2x=11-5=6、x=?",exp:"2x+5=11 → 2x=6 → x=3"},
+  {id:15,cat:"一次方程式",gr:"中1",q:"5x - 3 = 2x + 9 を解きなさい。",a:"x=4",h1:"xの項を左辺に、数字を右辺に移項",h2:"3x=12、x=?",exp:"5x-2x=9+3 → 3x=12 → x=4"},
+  {id:16,cat:"一次方程式",gr:"中1",q:"3(x - 2) = x + 4 を解きなさい。",a:"x=5",h1:"まず左辺を展開する",h2:"3x-6=x+4 → 2x=?",exp:"3x-6=x+4 → 2x=10 → x=5"},
+  {id:17,cat:"一次方程式",gr:"中1",q:"x/2 = 6 を解きなさい。",a:"x=12",h1:"両辺に2をかける",h2:"6×2=?",exp:"x/2=6 → x=6×2=12"},
+  {id:18,cat:"一次方程式",gr:"中1",q:"比例式 x : 4 = 3 : 2 を解きなさい。",a:"x=6",h1:"外×外 = 内×内（外項の積 = 内項の積）",h2:"2x=12、x=?",exp:"x×2=4×3 → 2x=12 → x=6"},
+
+  // --- 中1: 比例・反比例 ---
+  {id:19,cat:"比例・反比例",gr:"中1",q:"y = 3x で、x = 4 のとき y の値を求めなさい。",a:"12",h1:"xに4を代入する",h2:"3×4=?",exp:"y=3×4=12"},
+  {id:20,cat:"比例・反比例",gr:"中1",q:"y が x に比例し、x=2のとき y=10。比例定数を求めなさい。",a:"5",h1:"y=ax とおいて代入する",h2:"10=a×2 → a=?",exp:"10=2a → a=5"},
+  {id:21,cat:"比例・反比例",gr:"中1",q:"y = 6/x で、x = 2 のとき y の値を求めなさい。",a:"3",h1:"xに2を代入する",h2:"6÷2=?",exp:"y=6/2=3"},
+  {id:22,cat:"比例・反比例",gr:"中1",q:"y が x に反比例し、x=3のとき y=4。比例定数を求めなさい。",a:"12",h1:"y=a/x とおいて代入",h2:"4=a/3 → a=?",exp:"4=a/3 → a=12"},
+
+  // --- 中1: 平面図形 ---
+  {id:23,cat:"平面図形",gr:"中1",q:"半径5cmの円の面積を求めなさい。（πを使った答えで）",a:"25π",h1:"円の面積 = π × 半径²",h2:"π×5²=?",exp:"S=π×5²=25π (cm²)"},
+  {id:24,cat:"平面図形",gr:"中1",q:"半径4cmの円の円周を求めなさい。（πを使った答えで）",a:"8π",h1:"円周 = 2 × π × 半径",h2:"2×π×4=?",exp:"L=2π×4=8π (cm)"},
+  {id:25,cat:"平面図形",gr:"中1",q:"底辺8cm、高さ5cmの三角形の面積を求めなさい。",a:"20",h1:"三角形の面積 = 底辺 × 高さ ÷ 2",h2:"8×5÷2=?",exp:"S=8×5÷2=20 (cm²)"},
+  {id:26,cat:"平面図形",gr:"中1",q:"対角線が6cmと10cmのひし形の面積を求めなさい。",a:"30",h1:"ひし形の面積 = 対角線 × 対角線 ÷ 2",h2:"6×10÷2=?",exp:"S=6×10÷2=30 (cm²)"},
+
+  // --- 中1: 空間図形 ---
+  {id:27,cat:"空間図形",gr:"中1",q:"1辺3cmの立方体の体積を求めなさい。",a:"27",h1:"立方体の体積 = 1辺³",h2:"3³=3×3×3=?",exp:"V=3³=27 (cm³)"},
+  {id:28,cat:"空間図形",gr:"中1",q:"底面の半径3cm、高さ4cmの円柱の体積を求めなさい。（πを使った答えで）",a:"36π",h1:"円柱の体積 = 底面積 × 高さ",h2:"π×3²×4=?",exp:"V=π×9×4=36π (cm³)"},
+  {id:29,cat:"空間図形",gr:"中1",q:"半径3cmの球の体積を求めなさい。（πを使った答えで）",a:"36π",h1:"球の体積 = (4/3)πr³",h2:"(4/3)×π×27=?",exp:"V=(4/3)π×3³=(4/3)×27π=36π (cm³)"},
+
+  // --- 中1: 資料の活用 ---
+  {id:30,cat:"資料の活用",gr:"中1",q:"データ「2, 5, 3, 8, 7」の平均値を求めなさい。",a:"5",h1:"平均 = 合計 ÷ 個数",h2:"(2+5+3+8+7)÷5=?",exp:"(2+5+3+8+7)÷5=25÷5=5"},
+  {id:31,cat:"資料の活用",gr:"中1",q:"データ「1, 3, 5, 7, 9」の中央値（メジアン）を求めなさい。",a:"5",h1:"中央値は小さい順に並べた中央の値",h2:"5個のデータの3番目は？",exp:"1,3,5,7,9 → 3番目の5が中央値"},
+  {id:32,cat:"資料の活用",gr:"中1",q:"データ「3, 5, 3, 7, 3, 8」の最頻値（モード）を求めなさい。",a:"3",h1:"最頻値は最も多く出てくる値",h2:"3は何回出てくる？",exp:"3が3回出てくるので最頻値は3"},
+
+  // --- 中2: 式の計算 ---
+  {id:33,cat:"式の計算",gr:"中2",q:"(3x + 2y) + (x - 5y) を簡単にしなさい。",a:"4x-3y",h1:"同類項（xの項同士、yの項同士）をまとめる",h2:"3x+x=4x、2y-5y=?",exp:"(3x+2y)+(x-5y)=4x+2y-5y=4x-3y"},
+  {id:34,cat:"式の計算",gr:"中2",q:"3(2x - y) - 2(x + 3y) を展開・整理しなさい。",a:"4x-9y",h1:"各括弧に係数を分配してから同類項をまとめる",h2:"6x-3y-2x-6y=?",exp:"6x-3y-2x-6y=4x-9y"},
+  {id:35,cat:"式の計算",gr:"中2",q:"6x²y ÷ 2xy を計算しなさい。",a:"3x",h1:"係数と文字を別々に割る",h2:"6÷2=3、x²÷x=x、y÷y=1",exp:"6x²y÷2xy=(6/2)×(x²/x)×(y/y)=3x"},
+  {id:36,cat:"式の計算",gr:"中2",q:"4x²y × 3xy² ÷ 6x²y² を計算しなさい。",a:"2xy",h1:"掛け算と割り算を一度に処理する",h2:"係数：4×3÷6=2、文字のべき乗をまとめる",exp:"(4×3÷6)×x^(2+1-2)×y^(1+2-2)=2xy"},
+
+  // --- 中2: 連立方程式 ---
+  {id:37,cat:"連立方程式",gr:"中2",q:"連立方程式を解きなさい。\nx + y = 5\nx - y = 1",a:"x=3,y=2",h1:"たし算して y を消す（加減法）",h2:"2x=6 → x=3、y=?",exp:"2式をたすと 2x=6 → x=3。代入 → y=2"},
+  {id:38,cat:"連立方程式",gr:"中2",q:"連立方程式を解きなさい。\n2x + y = 7\nx + 3y = 9",a:"x=3,y=1",h1:"加減法：①×3 - ②×1 でyを消す",h2:"5x=12? → 再計算。①-②×3も試して",exp:"①×3-②: 5x=12は不正解。①でy=7-2x,代入 → x=3,y=1"},
+  {id:39,cat:"連立方程式",gr:"中2",q:"連立方程式を解きなさい。\n3x + 2y = 12\nx = y",a:"x=12/5,y=12/5",h1:"代入法：x=yを①に代入",h2:"3y+2y=12 → 5y=12 → y=?",exp:"x=yを代入 → 5x=12 → x=y=12/5"},
+  {id:40,cat:"連立方程式",gr:"中2",q:"連立方程式を解きなさい。\ny = 2x - 1\ny = x + 3",a:"x=4,y=7",h1:"代入法：右辺どうしをイコールで結ぶ",h2:"2x-1=x+3 → x=?",exp:"2x-1=x+3 → x=4。y=4+3=7"},
+
+  // --- 中2: 不等式 ---
+  {id:41,cat:"不等式",gr:"中2",q:"3x > 12 を解きなさい。",a:"x>4",h1:"両辺を3で割る（正の数で割るので不等号の向きは変わらない）",h2:"12÷3=?",exp:"3x>12 → x>4"},
+  {id:42,cat:"不等式",gr:"中2",q:"-2x ≦ 6 を解きなさい。",a:"x≧-3",h1:"負の数で割るとき不等号が逆向きになる",h2:"x ≦ or ≧ -3？",exp:"-2x≦6 → x≧-3（負で割るので向き逆転）"},
+
+  // --- 中2: 一次関数 ---
+  {id:43,cat:"一次関数",gr:"中2",q:"y = 2x + 3 の傾きを答えなさい。",a:"2",h1:"y=ax+b の a が傾き",h2:"y=2x+3 の a は？",exp:"y=2x+3 → 傾き = 2"},
+  {id:44,cat:"一次関数",gr:"中2",q:"y = -3x + 1 の切片を答えなさい。",a:"1",h1:"y=ax+b の b が切片（y軸との交点のy座標）",h2:"y=-3x+1 の b は？",exp:"y=-3x+1 → 切片 = 1"},
+  {id:45,cat:"一次関数",gr:"中2",q:"傾き3、切片-2の一次関数の式を求めなさい。（y=の形で）",a:"y=3x-2",h1:"y = 傾き × x + 切片",h2:"y=3x+(-2)=?",exp:"y=3x+(-2)=3x-2"},
+  {id:46,cat:"一次関数",gr:"中2",q:"2点(0, 1)と(2, 5)を通る直線の式を求めなさい。",a:"y=2x+1",h1:"傾き=(5-1)/(2-0)=?",h2:"傾き=2、切片は(0,1)より1",exp:"傾き=(5-1)/(2-0)=2、切片=1 → y=2x+1"},
+  {id:47,cat:"一次関数",gr:"中2",q:"y = 2x + 1 で x が1から3まで増加するときの変化の割合を求めなさい。",a:"2",h1:"変化の割合 = yの増加量 ÷ xの増加量",h2:"一次関数の変化の割合は一定で傾きに等しい",exp:"一次関数の変化の割合は常に傾き=2"},
+
+  // --- 中2: 平行と合同 ---
+  {id:48,cat:"平行と合同",gr:"中2",q:"三角形の内角の和を答えなさい。（単位:°）",a:"180",h1:"三角形の3つの角をたすと？",h2:"常に一定",exp:"三角形の内角の和 = 180°"},
+  {id:49,cat:"平行と合同",gr:"中2",q:"多角形の外角の和を答えなさい。（単位:°）",a:"360",h1:"どんな多角形でも外角の和は同じ",h2:"常に一定",exp:"多角形の外角の和は常に360°"},
+  {id:50,cat:"平行と合同",gr:"中2",q:"n角形の内角の和の公式を答えなさい。（例：180(n-2)）",a:"180(n-2)",h1:"三角形の内角の和は180°、4角形は360°…",h2:"180×(n-2)の式",exp:"n角形の内角の和 = 180°×(n-2)"},
+  {id:51,cat:"平行と合同",gr:"中2",q:"平行四辺形の対角（向かい合う角）の関係を答えなさい。",a:"等しい",h1:"平行四辺形の向かい合う角",h2:"等し◯",exp:"平行四辺形では対角（向かい合う角）は等しい"},
+
+  // --- 中2: 確率 ---
+  {id:52,cat:"確率",gr:"中2",q:"1枚のコインを投げたとき、表が出る確率を答えなさい。（分数で）",a:"1/2",h1:"全体の場合の数は2（表・裏）",h2:"表が出る場合の数÷全体",exp:"P=1/2"},
+  {id:53,cat:"確率",gr:"中2",q:"1から6までのさいころを1回投げたとき、偶数が出る確率を答えなさい。",a:"1/2",h1:"偶数は2,4,6の3通り。全体は6通り",h2:"3÷6=?",exp:"P=3/6=1/2"},
+  {id:54,cat:"確率",gr:"中2",q:"2枚のコインを同時に投げたとき、2枚とも表が出る確率を答えなさい。（分数で）",a:"1/4",h1:"全体の場合の数は2×2=4通り",h2:"表表は1通り。1÷4=?",exp:"P=1/4"},
+
+  // --- 中2: 場合の数 ---
+  {id:55,cat:"場合の数",gr:"中2",q:"A,B,C,Dの4人から2人を選ぶ組み合わせの数は何通りか。",a:"6",h1:"組み合わせ C(4,2) = 4×3÷2",h2:"4×3÷2×1=?",exp:"C(4,2)=4×3/(2×1)=6通り"},
+  {id:56,cat:"場合の数",gr:"中2",q:"A,B,Cの3人が1列に並ぶ並び方は何通りか。",a:"6",h1:"3! = 3×2×1",h2:"3×2×1=?",exp:"P(3,3)=3!=6通り"},
+
+  // ===== 正負の数 追加（23問、計30問）=====
+  {id:57,cat:"正負の数",gr:"中1",q:"(-3) + (-8) を計算しなさい。",a:"-11",h1:"同符号のたし算：絶対値をたして共通の符号をつける",h2:"3+8=11、どちらも負なので？",exp:"(-3)+(-8)=-(3+8)=-11"},
+  {id:58,cat:"正負の数",gr:"中1",q:"(+6) + (-4) を計算しなさい。",a:"2",h1:"異符号のたし算：絶対値の差に絶対値が大きい方の符号",h2:"6-4=2、大きいのは+6なので符号は？",exp:"(+6)+(-4)=+(6-4)=2"},
+  {id:59,cat:"正負の数",gr:"中1",q:"(-9) - (+5) を計算しなさい。",a:"-14",h1:"引くときは符号を変えてたし算に変える",h2:"(-9)+(-5)=?",exp:"(-9)-(+5)=(-9)+(-5)=-14"},
+  {id:60,cat:"正負の数",gr:"中1",q:"(+8) - (-3) を計算しなさい。",a:"11",h1:"マイナスを引くとプラスになる",h2:"(+8)+(+3)=?",exp:"(+8)-(-3)=(+8)+(+3)=11"},
+  {id:61,cat:"正負の数",gr:"中1",q:"(+7) × (-4) を計算しなさい。",a:"-28",h1:"正×負＝負",h2:"7×4=28、符号は？",exp:"正×負=負なので (+7)×(-4)=-28"},
+  {id:62,cat:"正負の数",gr:"中1",q:"(-6) × (-5) を計算しなさい。",a:"30",h1:"負×負＝正",h2:"6×5=30、符号は？",exp:"負×負=正なので (-6)×(-5)=30"},
+  {id:63,cat:"正負の数",gr:"中1",q:"(-24) ÷ (-6) を計算しなさい。",a:"4",h1:"負÷負＝正",h2:"24÷6=4、符号は？",exp:"負÷負=正なので (-24)÷(-6)=4"},
+  {id:64,cat:"正負の数",gr:"中1",q:"(+15) ÷ (-3) を計算しなさい。",a:"-5",h1:"正÷負＝負",h2:"15÷3=5、符号は？",exp:"正÷負=負なので (+15)÷(-3)=-5"},
+  {id:65,cat:"正負の数",gr:"中1",q:"(-2)⁴ を計算しなさい。",a:"16",h1:"偶数乗は結果が正になる",h2:"(-2)×(-2)×(-2)×(-2)を順に計算",exp:"(-2)⁴=(-2)×(-2)×(-2)×(-2)=4×4=16"},
+  {id:66,cat:"正負の数",gr:"中1",q:"(-3)² × 2 を計算しなさい。",a:"18",h1:"先に(-3)²を計算する",h2:"(-3)²=9、9×2=?",exp:"(-3)²=9、9×2=18"},
+  {id:67,cat:"正負の数",gr:"中1",q:"絶対値が8の数をすべて答えなさい。（小さい方先、カンマ区切り）",a:"-8,8",h1:"絶対値とは数直線上の0からの距離",h2:"負の数と正の数の両方ある",exp:"絶対値が8の数は -8 と 8"},
+  {id:68,cat:"正負の数",gr:"中1",q:"|(-5)| の値を求めなさい。",a:"5",h1:"絶対値は必ず0以上の数",h2:"-5の0からの距離は？",exp:"|(-5)|=5（絶対値は符号を外した値）"},
+  {id:69,cat:"正負の数",gr:"中1",q:"(-3) × 2 + (-5) を計算しなさい。",a:"-11",h1:"掛け算を先に計算する（乗除優先）",h2:"-6+(-5)=?",exp:"(-3)×2+(-5)=-6+(-5)=-11"},
+  {id:70,cat:"正負の数",gr:"中1",q:"4 + (-3) × (-2) を計算しなさい。",a:"10",h1:"掛け算を先に計算する",h2:"(-3)×(-2)=6、4+6=?",exp:"4+(-3)×(-2)=4+6=10"},
+  {id:71,cat:"正負の数",gr:"中1",q:"(-20) ÷ 4 - 1 を計算しなさい。",a:"-6",h1:"割り算を先に計算する",h2:"-5-1=?",exp:"(-20)÷4-1=-5-1=-6"},
+  {id:72,cat:"正負の数",gr:"中1",q:"(-4 + 2) × (-3) を計算しなさい。",a:"6",h1:"括弧の中を先に計算",h2:"(-2)×(-3)=?",exp:"(-4+2)×(-3)=(-2)×(-3)=6"},
+  {id:73,cat:"正負の数",gr:"中1",q:"次の数の中で最も小さい数はどれか。\n-3、5、-8、2",a:"-8",h1:"数直線上で最も左にある数が最小",h2:"負の数同士では絶対値が大きい方が小さい",exp:"-8<-3<2<5 なので最小は -8"},
+  {id:74,cat:"正負の数",gr:"中1",q:"次の数の中で最も大きい数はどれか。\n-7、0、-2、3",a:"3",h1:"数直線上で最も右にある数が最大",h2:"正の数は0より大きい",exp:"-7<-2<0<3 なので最大は 3"},
+  {id:75,cat:"正負の数",gr:"中1",q:"3 × (-4) ÷ (-6) を計算しなさい。",a:"2",h1:"符号を先に決める：負の数は2個なので積は正",h2:"3×4÷6=?",exp:"負の数2個で符号は正。3×4÷6=2"},
+  {id:76,cat:"正負の数",gr:"中1",q:"(-1/2) × 6 を計算しなさい。",a:"-3",h1:"正×負＝負",h2:"(1/2)×6=3、符号は？",exp:"(-1/2)×6=-(1/2×6)=-3"},
+  {id:77,cat:"正負の数",gr:"中1",q:"(-5)² - (-5)³ を計算しなさい。",a:"150",h1:"(-5)²=25、(-5)³=?",h2:"(-5)³=-125。25-(-125)=?",exp:"(-5)²=25、(-5)³=-125。25-(-125)=25+125=150"},
+  {id:78,cat:"正負の数",gr:"中1",q:"(-2) × (-3) × (-4) を計算しなさい。",a:"-24",h1:"負の数が奇数個あれば積は負",h2:"2×3×4=24、負の数は3個(奇数)なので符号は？",exp:"負の数3個(奇数)なので積は負。2×3×4=24 → -24"},
+  {id:79,cat:"正負の数",gr:"中1",q:"ある数から (-7) を引いたら 5 になった。ある数を求めなさい。",a:"-2",h1:"(ある数)-(-7)=5 という方程式を立てる",h2:"ある数+7=5 → ある数=?",exp:"x-(-7)=5 → x+7=5 → x=-2"},
+
+  // ===== 文字と式 追加（25問、計30問）=====
+  {id:80,cat:"文字と式",gr:"中1",q:"x = 2 のとき、3x + 1 の値を求めなさい。",a:"7",h1:"xに2を代入する",h2:"3×2+1=?",exp:"3×2+1=6+1=7"},
+  {id:81,cat:"文字と式",gr:"中1",q:"a = -3 のとき、a² + 2 の値を求めなさい。",a:"11",h1:"aに-3を代入する",h2:"(-3)²+2=9+2=?",exp:"(-3)²+2=9+2=11"},
+  {id:82,cat:"文字と式",gr:"中1",q:"5x - 3x を簡単にしなさい。",a:"2x",h1:"同類項（xの項）をまとめる",h2:"(5-3)x=?",exp:"5x-3x=(5-3)x=2x"},
+  {id:83,cat:"文字と式",gr:"中1",q:"4x + 3 - 2x + 7 を簡単にしなさい。",a:"2x+10",h1:"xの項同士、数の項同士をまとめる",h2:"(4-2)x+(3+7)=?",exp:"4x-2x+3+7=2x+10"},
+  {id:84,cat:"文字と式",gr:"中1",q:"3(2a - 1) を展開しなさい。",a:"6a-3",h1:"分配法則：3×2a と 3×(-1)",h2:"6a + ?",exp:"3(2a-1)=3×2a+3×(-1)=6a-3"},
+  {id:85,cat:"文字と式",gr:"中1",q:"(8x + 4) ÷ 4 を計算しなさい。",a:"2x+1",h1:"各項を4で割る",h2:"8x÷4=2x、4÷4=?",exp:"(8x+4)÷4=2x+1"},
+  {id:86,cat:"文字と式",gr:"中1",q:"2(x + 3) + 3(x - 1) を展開・整理しなさい。",a:"5x+3",h1:"各括弧に係数を分配してから同類項をまとめる",h2:"2x+6+3x-3=?",exp:"2x+6+3x-3=5x+3"},
+  {id:87,cat:"文字と式",gr:"中1",q:"3(2x - 1) - (4x - 5) を展開・整理しなさい。",a:"2x+2",h1:"-(4x-5)=-4x+5 に注意",h2:"6x-3-4x+5=?",exp:"6x-3-4x+5=2x+2"},
+  {id:88,cat:"文字と式",gr:"中1",q:"x = 5、y = 2 のとき、2x - 3y の値を求めなさい。",a:"4",h1:"それぞれ代入する",h2:"2×5-3×2=10-6=?",exp:"2×5-3×2=10-6=4"},
+  {id:89,cat:"文字と式",gr:"中1",q:"縦 a cm、横 b cm の長方形の周の長さを文字式で表しなさい。",a:"2(a+b)",h1:"周の長さ = (縦+横)×2",h2:"(a+b)の2倍",exp:"周=2×(a+b)=2(a+b) cm"},
+  {id:90,cat:"文字と式",gr:"中1",q:"n 個のりんごを 3 人で等しく分けたときの 1 人分を文字式で表しなさい。",a:"n/3",h1:"等しく分けるには割り算",h2:"n÷3=?",exp:"1人分=n÷3=n/3 (個)"},
+  {id:91,cat:"文字と式",gr:"中1",q:"1冊 a 円のノートを 5 冊と、1本 b 円のペンを 3 本買ったときの代金を文字式で表しなさい。",a:"5a+3b",h1:"ノートの代金とペンの代金を合わせる",h2:"a×5+b×3=?",exp:"5a+3b (円)"},
+  {id:92,cat:"文字と式",gr:"中1",q:"x = -1 のとき、x² - x + 3 の値を求めなさい。",a:"5",h1:"xに-1を代入する（べき乗に注意）",h2:"(-1)²-(-1)+3=1+1+3=?",exp:"(-1)²-(-1)+3=1+1+3=5"},
+  {id:93,cat:"文字と式",gr:"中1",q:"4ab - 2ab を簡単にしなさい。",a:"2ab",h1:"同類項（abの項）をまとめる",h2:"(4-2)ab=?",exp:"4ab-2ab=(4-2)ab=2ab"},
+  {id:94,cat:"文字と式",gr:"中1",q:"時速 v km で t 時間走ったときの距離を文字式で表しなさい。",a:"vt",h1:"距離=速さ×時間",h2:"v×t=?",exp:"距離=v×t=vt (km)"},
+  {id:95,cat:"文字と式",gr:"中1",q:"5x + 2y - 3x - y を簡単にしなさい。",a:"2x+y",h1:"xの項同士、yの項同士をまとめる",h2:"(5-3)x+(2-1)y=?",exp:"(5-3)x+(2-1)y=2x+y"},
+  {id:96,cat:"文字と式",gr:"中1",q:"-(3x - 4) を展開しなさい。",a:"-3x+4",h1:"-(a-b)=-a+b",h2:"-1×3x+(-1)×(-4)=?",exp:"-(3x-4)=-3x+4"},
+  {id:97,cat:"文字と式",gr:"中1",q:"a = 4 のとき、(a - 1)² の値を求めなさい。",a:"9",h1:"まずa=4を代入してから計算",h2:"(4-1)²=3²=?",exp:"(4-1)²=3²=9"},
+  {id:98,cat:"文字と式",gr:"中1",q:"3(x + 2) - 2(2x - 1) を展開・整理しなさい。",a:"-x+8",h1:"各括弧に係数を分配してから同類項をまとめる",h2:"3x+6-4x+2=?",exp:"3x+6-4x+2=-x+8"},
+  {id:99,cat:"文字と式",gr:"中1",q:"底辺 a cm、高さ h cm の三角形の面積を文字式で表しなさい。",a:"ah/2",h1:"三角形の面積=底辺×高さ÷2",h2:"a×h÷2=?",exp:"S=a×h÷2=ah/2 (cm²)"},
+  {id:100,cat:"文字と式",gr:"中1",q:"x = 2、y = 1 のとき、x² + 2xy - y² の値を求めなさい。",a:"7",h1:"各項にx=2, y=1を代入する",h2:"4+2×2×1-1=4+4-?",exp:"x²+2xy-y²=4+4-1=7"},
+  {id:101,cat:"文字と式",gr:"中1",q:"「ある数 x の 3 倍より 2 大きい数」を文字式で表しなさい。",a:"3x+2",h1:"「3倍」は×3、「2大きい」は+2",h2:"3×x+2=?",exp:"xの3倍は3x、それより2大きいので 3x+2"},
+  {id:102,cat:"文字と式",gr:"中1",q:"2 つの数 a と b の積を 2 倍した式を文字式で表しなさい。",a:"2ab",h1:"「積」はかけ算、「2倍」はさらに2をかける",h2:"a×b×2=?",exp:"a×b×2=2ab"},
+  {id:103,cat:"文字と式",gr:"中1",q:"4x² ÷ 2x を計算しなさい。",a:"2x",h1:"係数同士、文字同士をそれぞれ割る",h2:"4÷2=2, x²÷x=?",exp:"4x²÷2x=(4÷2)×(x²÷x)=2x"},
+  {id:104,cat:"文字と式",gr:"中1",q:"a = -2 のとき、-a³ の値を求めなさい。",a:"8",h1:"まずa³を計算してから符号を変える",h2:"(-2)³=-8、-(-8)=?",exp:"(-2)³=-8、-(-8)=8"},
+
+  // ===== 方程式 新規（30問）=====
+  {id:105,cat:"方程式",gr:"中1",q:"x + 7 = 12 を解きなさい。",a:"x=5",h1:"7を右辺に移項する",h2:"x=12-7=?",exp:"x+7=12 → x=12-7=5"},
+  {id:106,cat:"方程式",gr:"中1",q:"2x = 10 を解きなさい。",a:"x=5",h1:"両辺を2で割る",h2:"10÷2=?",exp:"2x=10 → x=5"},
+  {id:107,cat:"方程式",gr:"中1",q:"x - 4 = 9 を解きなさい。",a:"x=13",h1:"-4を右辺に移項する",h2:"x=9+4=?",exp:"x-4=9 → x=13"},
+  {id:108,cat:"方程式",gr:"中1",q:"4x + 2 = 14 を解きなさい。",a:"x=3",h1:"まず2を右辺に移項する",h2:"4x=12 → x=?",exp:"4x=14-2=12 → x=3"},
+  {id:109,cat:"方程式",gr:"中1",q:"6x - 1 = 11 を解きなさい。",a:"x=2",h1:"まず-1を右辺に移項する",h2:"6x=12 → x=?",exp:"6x=11+1=12 → x=2"},
+  {id:110,cat:"方程式",gr:"中1",q:"3x + 7 = x + 13 を解きなさい。",a:"x=3",h1:"xの項を左辺、数の項を右辺に移項",h2:"2x=6 → x=?",exp:"3x-x=13-7 → 2x=6 → x=3"},
+  {id:111,cat:"方程式",gr:"中1",q:"5x - 4 = 3x + 8 を解きなさい。",a:"x=6",h1:"xの項を左辺に集める",h2:"2x=12 → x=?",exp:"5x-3x=8+4 → 2x=12 → x=6"},
+  {id:112,cat:"方程式",gr:"中1",q:"2(x + 3) = 10 を解きなさい。",a:"x=2",h1:"両辺を2で割ってから解く",h2:"x+3=5 → x=?",exp:"x+3=5 → x=2"},
+  {id:113,cat:"方程式",gr:"中1",q:"3(2x - 1) = 9 を解きなさい。",a:"x=2",h1:"まず展開する",h2:"6x-3=9 → 6x=12 → x=?",exp:"6x-3=9 → 6x=12 → x=2"},
+  {id:114,cat:"方程式",gr:"中1",q:"x/3 = 4 を解きなさい。",a:"x=12",h1:"両辺に3をかける",h2:"4×3=?",exp:"x/3=4 → x=4×3=12"},
+  {id:115,cat:"方程式",gr:"中1",q:"2x/5 = 4 を解きなさい。",a:"x=10",h1:"両辺に5をかける",h2:"2x=20 → x=?",exp:"2x/5=4 → 2x=20 → x=10"},
+  {id:116,cat:"方程式",gr:"中1",q:"0.3x = 0.9 を解きなさい。",a:"x=3",h1:"両辺×10で整数係数にして解く",h2:"3x=9 → x=?",exp:"両辺×10: 3x=9 → x=3"},
+  {id:117,cat:"方程式",gr:"中1",q:"0.2x + 1 = 2 を解きなさい。",a:"x=5",h1:"両辺×10で整数に変換",h2:"2x+10=20 → 2x=10 → x=?",exp:"×10: 2x+10=20 → 2x=10 → x=5"},
+  {id:118,cat:"方程式",gr:"中1",q:"(x - 1)/2 = 3 を解きなさい。",a:"x=7",h1:"両辺に2をかける",h2:"x-1=6 → x=?",exp:"x-1=6 → x=7"},
+  {id:119,cat:"方程式",gr:"中1",q:"2(x - 3) = x + 1 を解きなさい。",a:"x=7",h1:"左辺を展開してxをまとめる",h2:"2x-6=x+1 → x=?",exp:"2x-6=x+1 → x=7"},
+  {id:120,cat:"方程式",gr:"中1",q:"4(x + 1) = 3(x + 2) を解きなさい。",a:"x=2",h1:"両辺をそれぞれ展開する",h2:"4x+4=3x+6 → x=?",exp:"4x+4=3x+6 → x=2"},
+  {id:121,cat:"方程式",gr:"中1",q:"ある数の 2 倍から 3 を引くと 9 になった。ある数を求めなさい。",a:"6",h1:"方程式を立てる：2x-3=9",h2:"2x=12 → x=?",exp:"2x-3=9 → 2x=12 → x=6"},
+  {id:122,cat:"方程式",gr:"中1",q:"連続する 2 つの整数の和が 15 のとき、小さい方の整数を求めなさい。",a:"7",h1:"小さい方をxとすると大きい方はx+1",h2:"x+(x+1)=15 → 2x+1=15 → x=?",exp:"x+(x+1)=15 → 2x=14 → x=7"},
+  {id:123,cat:"方程式",gr:"中1",q:"3x = -15 を解きなさい。",a:"x=-5",h1:"両辺を3で割る",h2:"-15÷3=?",exp:"3x=-15 → x=-5"},
+  {id:124,cat:"方程式",gr:"中1",q:"-4x = 20 を解きなさい。",a:"x=-5",h1:"両辺を-4で割る（負の数で割ることに注意）",h2:"20÷(-4)=?",exp:"-4x=20 → x=20÷(-4)=-5"},
+  {id:125,cat:"方程式",gr:"中1",q:"x + 2y = 8 で、x = 2 のとき y の値を求めなさい。",a:"y=3",h1:"x=2を代入する",h2:"2+2y=8 → 2y=6 → y=?",exp:"2+2y=8 → 2y=6 → y=3"},
+  {id:126,cat:"方程式",gr:"中1",q:"連立方程式を解きなさい。\nx + y = 7\nx - y = 3",a:"x=5,y=2",h1:"2式をたして y を消す（加減法）",h2:"2x=10 → x=5、y=?",exp:"2x=10 → x=5。5+y=7 → y=2"},
+  {id:127,cat:"方程式",gr:"中1",q:"比例式 3 : x = 6 : 10 を解きなさい。",a:"x=5",h1:"外項の積＝内項の積（外×外＝内×内）",h2:"3×10=6×x → x=?",exp:"3×10=6x → 30=6x → x=5"},
+  {id:128,cat:"方程式",gr:"中1",q:"1個 80 円のみかんを x 個買ったら 560 円だった。x を求めなさい。",a:"x=7",h1:"（1個の値段）×（個数）＝合計金額",h2:"80x=560 → x=?",exp:"80x=560 → x=7"},
+  {id:129,cat:"方程式",gr:"中1",q:"6x - 5 = 31 を解きなさい。",a:"x=6",h1:"-5を右辺に移項する",h2:"6x=36 → x=?",exp:"6x=31+5=36 → x=6"},
+  {id:130,cat:"方程式",gr:"中1",q:"2x - 7 = -1 を解きなさい。",a:"x=3",h1:"-7を右辺に移項する",h2:"2x=6 → x=?",exp:"2x=-1+7=6 → x=3"},
+  {id:131,cat:"方程式",gr:"中1",q:"8x = 64 を解きなさい。",a:"x=8",h1:"両辺を8で割る",h2:"64÷8=?",exp:"8x=64 → x=8"},
+  {id:132,cat:"方程式",gr:"中2",q:"4x - 3 = 2x + 9 を解きなさい。",a:"x=6",h1:"xの項を左辺、数の項を右辺に移項",h2:"2x=12 → x=?",exp:"4x-2x=9+3 → 2x=12 → x=6"},
+  {id:133,cat:"方程式",gr:"中1",q:"(x + 4) / 3 = 2 を解きなさい。",a:"x=2",h1:"両辺に3をかける",h2:"x+4=6 → x=?",exp:"x+4=6 → x=2"},
+  {id:134,cat:"方程式",gr:"中1",q:"あるものを 4 等分すると 1 つが 7 になる。もとの数を x として式を作り、x を求めなさい。",a:"x=28",h1:"x÷4=7 という方程式を立てる",h2:"x=7×4=?",exp:"x÷4=7 → x=28"},
+
+  // ===== 比例・反比例 追加（26問、計30問）=====
+  {id:135,cat:"比例・反比例",gr:"中1",q:"y = 5x で、x = 3 のとき y を求めなさい。",a:"15",h1:"xに3を代入する",h2:"5×3=?",exp:"y=5×3=15"},
+  {id:136,cat:"比例・反比例",gr:"中1",q:"y = -2x で、x = 4 のとき y を求めなさい。",a:"-8",h1:"xに4を代入する",h2:"-2×4=?",exp:"y=-2×4=-8"},
+  {id:137,cat:"比例・反比例",gr:"中1",q:"y が x に比例し、x = 3 のとき y = 12。比例定数 a を求めなさい。",a:"4",h1:"y=ax に代入する",h2:"12=a×3 → a=?",exp:"12=3a → a=4"},
+  {id:138,cat:"比例・反比例",gr:"中1",q:"y = 4/x で、x = 2 のとき y を求めなさい。",a:"2",h1:"xに2を代入する",h2:"4÷2=?",exp:"y=4/2=2"},
+  {id:139,cat:"比例・反比例",gr:"中1",q:"y が x に反比例し、x = 2 のとき y = 6。比例定数 k を求めなさい。",a:"12",h1:"y=k/x に代入する",h2:"6=k/2 → k=?",exp:"6=k/2 → k=12"},
+  {id:140,cat:"比例・反比例",gr:"中1",q:"y = 2x で、x が 1 から 3 に増えたとき y の増加量を求めなさい。",a:"4",h1:"y(3)-y(1) を計算する",h2:"y(3)=6、y(1)=2。差は？",exp:"y(3)=6、y(1)=2。増加量=6-2=4"},
+  {id:141,cat:"比例・反比例",gr:"中1",q:"y = -3x で、x = -2 のとき y を求めなさい。",a:"6",h1:"xに-2を代入する",h2:"-3×(-2)=?",exp:"y=-3×(-2)=6"},
+  {id:142,cat:"比例・反比例",gr:"中1",q:"y = 8/x で、x = 4 のとき y を求めなさい。",a:"2",h1:"xに4を代入する",h2:"8÷4=?",exp:"y=8/4=2"},
+  {id:143,cat:"比例・反比例",gr:"中1",q:"y が x に比例し、x = 5 のとき y = 20。x = -3 のとき y を求めなさい。",a:"-12",h1:"まず比例定数aを求める",h2:"a=20/5=4。y=4×(-3)=?",exp:"a=4、y=4×(-3)=-12"},
+  {id:144,cat:"比例・反比例",gr:"中1",q:"y が x に反比例し、x = 4 のとき y = 3。x = 6 のとき y を求めなさい。",a:"2",h1:"比例定数 k=xy を求める",h2:"k=4×3=12。y=12/6=?",exp:"k=12、y=12/6=2"},
+  {id:145,cat:"比例・反比例",gr:"中1",q:"y = 2x で、x = 5 のとき y を求めなさい。",a:"10",h1:"xに5を代入する",h2:"2×5=?",exp:"y=2×5=10"},
+  {id:146,cat:"比例・反比例",gr:"中1",q:"y = 12/x で、x が 2 倍になったとき y は何倍になるか。（分数で）",a:"1/2",h1:"反比例では y=k/x なので x が増えると y は減る",h2:"x→2x のとき y→k/(2x)=(1/2)×(k/x)",exp:"y=12/x で x が2倍になると y は 1/2 倍"},
+  {id:147,cat:"比例・反比例",gr:"中1",q:"y = 2x で、x = 5 のとき y を求めなさい。（x=5を代入）",a:"10",h1:"y=ax で a=2、x=5",h2:"2×5=?",exp:"y=2×5=10"},
+  {id:148,cat:"比例・反比例",gr:"中1",q:"y = 3x で、x = 2 のとき y を求めなさい。",a:"6",h1:"xに2を代入する",h2:"3×2=?",exp:"y=3×2=6"},
+  {id:149,cat:"比例・反比例",gr:"中1",q:"y = -x のグラフの傾きを答えなさい。",a:"-1",h1:"y=ax の a が傾き",h2:"y=-1×x の a は？",exp:"y=-x=y=-1×x なので傾きは -1"},
+  {id:150,cat:"比例・反比例",gr:"中1",q:"y = 12/x で、x = 3 のとき y を求めなさい。",a:"4",h1:"xに3を代入する",h2:"12÷3=?",exp:"y=12/3=4"},
+  {id:151,cat:"比例・反比例",gr:"中1",q:"y が x に比例し、x = 6 のとき y = 18。このときの比例の式を求めなさい。（y=の形で）",a:"y=3x",h1:"a=y/x で比例定数を求める",h2:"a=18/6=3。y=?",exp:"a=18÷6=3 なので y=3x"},
+  {id:152,cat:"比例・反比例",gr:"中1",q:"y が x に反比例し、x = 2 のとき y = 10。x = 5 のとき y を求めなさい。",a:"4",h1:"比例定数 k=xy を求める",h2:"k=2×10=20。y=20/5=?",exp:"k=20、y=20/5=4"},
+  {id:153,cat:"比例・反比例",gr:"中1",q:"y = 2x で、x = -1 のとき y を求めなさい。",a:"-2",h1:"xに-1を代入する",h2:"2×(-1)=?",exp:"y=2×(-1)=-2"},
+  {id:154,cat:"比例・反比例",gr:"中1",q:"t 時間で w の仕事が完了し w が t に比例する。t = 4 のとき w = 20 とすると t = 7 のとき w を求めなさい。",a:"35",h1:"比例定数を求めてから代入",h2:"比例定数=20/4=5。w=5×7=?",exp:"比例定数=5、w=5×7=35"},
+  {id:155,cat:"比例・反比例",gr:"中1",q:"y = 6/x で、x = -3 のとき y を求めなさい。",a:"-2",h1:"xに-3を代入する",h2:"6÷(-3)=?",exp:"y=6÷(-3)=-2"},
+  {id:156,cat:"比例・反比例",gr:"中1",q:"y = -3x で、x = 2 のとき y を求めなさい。",a:"-6",h1:"xに2を代入する",h2:"-3×2=?",exp:"y=-3×2=-6"},
+  {id:157,cat:"比例・反比例",gr:"中1",q:"y = 5/x において、x と y の積は常にいくつか。",a:"5",h1:"反比例では xy=k（比例定数）",h2:"xy=5/x×x=?",exp:"y=5/x → xy=5（常に一定）"},
+  {id:158,cat:"比例・反比例",gr:"中1",q:"y = 4x で、y = 16 のとき x を求めなさい。",a:"x=4",h1:"y=16を代入する",h2:"16=4x → x=?",exp:"16=4x → x=4"},
+  {id:159,cat:"比例・反比例",gr:"中1",q:"速さ v (km/h) と所要時間 t (時間) が反比例し v = 60 のとき t = 2。v = 40 のとき t を求めなさい。",a:"3",h1:"vt=k（一定）として比例定数を求める",h2:"k=60×2=120。t=120/40=?",exp:"k=120、t=120/40=3"},
+  {id:160,cat:"比例・反比例",gr:"中1",q:"y = -2/x で、x = 1 のとき y を求めなさい。",a:"-2",h1:"xに1を代入する",h2:"-2/1=?",exp:"y=-2/1=-2"},
+
+  // ===== 図形 新規（30問）=====
+  {id:161,cat:"図形",gr:"中1",q:"半径 3 cm の円の面積を求めなさい。（πを使った答えで）",a:"9π",h1:"円の面積=πr²",h2:"π×3²=?",exp:"S=π×3²=9π (cm²)"},
+  {id:162,cat:"図形",gr:"中1",q:"直径 10 cm の円の円周を求めなさい。（πを使った答えで）",a:"10π",h1:"円周=π×直径",h2:"π×10=?",exp:"L=π×10=10π (cm)"},
+  {id:163,cat:"図形",gr:"中1",q:"底辺 6 cm、高さ 8 cm の三角形の面積を求めなさい。",a:"24",h1:"三角形の面積=底辺×高さ÷2",h2:"6×8÷2=?",exp:"S=6×8÷2=24 (cm²)"},
+  {id:164,cat:"図形",gr:"中1",q:"縦 4 cm、横 7 cm の長方形の面積を求めなさい。",a:"28",h1:"長方形の面積=縦×横",h2:"4×7=?",exp:"S=4×7=28 (cm²)"},
+  {id:165,cat:"図形",gr:"中1",q:"1辺 5 cm の正方形の周の長さを求めなさい。",a:"20",h1:"正方形の周=4×1辺",h2:"4×5=?",exp:"L=4×5=20 (cm)"},
+  {id:166,cat:"図形",gr:"中1",q:"底辺 8 cm、高さ 5 cm の平行四辺形の面積を求めなさい。",a:"40",h1:"平行四辺形の面積=底辺×高さ",h2:"8×5=?",exp:"S=8×5=40 (cm²)"},
+  {id:167,cat:"図形",gr:"中1",q:"上底 3 cm、下底 7 cm、高さ 4 cm の台形の面積を求めなさい。",a:"20",h1:"台形の面積=(上底+下底)×高さ÷2",h2:"(3+7)×4÷2=?",exp:"S=(3+7)×4÷2=20 (cm²)"},
+  {id:168,cat:"図形",gr:"中1",q:"三角形の 3 つの角が 70°、60°、x° のとき x を求めなさい。",a:"50",h1:"三角形の内角の和は180°",h2:"70+60+x=180 → x=?",exp:"x=180-70-60=50°"},
+  {id:169,cat:"図形",gr:"中2",q:"正五角形の内角の和を求めなさい。（単位:°）",a:"540",h1:"n角形の内角の和=180×(n-2)",h2:"180×(5-2)=180×3=?",exp:"180×(5-2)=540°"},
+  {id:170,cat:"図形",gr:"中2",q:"正六角形の 1 つの内角を求めなさい。（単位:°）",a:"120",h1:"内角の和÷辺の数",h2:"180×(6-2)÷6=?",exp:"180×4÷6=720÷6=120°"},
+  {id:171,cat:"図形",gr:"中1",q:"対角線が 8 cm と 6 cm のひし形の面積を求めなさい。",a:"24",h1:"ひし形の面積=対角線×対角線÷2",h2:"8×6÷2=?",exp:"S=8×6÷2=24 (cm²)"},
+  {id:172,cat:"図形",gr:"中1",q:"半径 6 cm、中心角 90° のおうぎ形の面積を求めなさい。（πを使った答えで）",a:"9π",h1:"おうぎ形の面積=πr²×(中心角/360)",h2:"π×36×(90/360)=π×36×(1/4)=?",exp:"S=π×6²×(1/4)=9π (cm²)"},
+  {id:173,cat:"図形",gr:"中1",q:"半径 6 cm、中心角 120° のおうぎ形の弧の長さを求めなさい。（πを使った答えで）",a:"4π",h1:"弧の長さ=2πr×(中心角/360)",h2:"2π×6×(120/360)=12π×(1/3)=?",exp:"2π×6×(1/3)=4π (cm)"},
+  {id:174,cat:"図形",gr:"中1",q:"1辺 4 cm の立方体の表面積を求めなさい。",a:"96",h1:"立方体の表面積=6×(1辺)²",h2:"6×4²=6×16=?",exp:"6×16=96 (cm²)"},
+  {id:175,cat:"図形",gr:"中1",q:"底面の半径 2 cm、高さ 5 cm の円柱の体積を求めなさい。（πを使った答えで）",a:"20π",h1:"円柱の体積=πr²×h",h2:"π×4×5=?",exp:"V=π×2²×5=20π (cm³)"},
+  {id:176,cat:"図形",gr:"中1",q:"縦 3 cm、横 4 cm、高さ 5 cm の直方体の体積を求めなさい。",a:"60",h1:"直方体の体積=縦×横×高さ",h2:"3×4×5=?",exp:"V=3×4×5=60 (cm³)"},
+  {id:177,cat:"図形",gr:"中1",q:"底面の半径 3 cm、高さ 4 cm の円錐の体積を求めなさい。（πを使った答えで）",a:"12π",h1:"円錐の体積=(1/3)×πr²×h",h2:"(1/3)×π×9×4=?",exp:"V=(1/3)×π×9×4=12π (cm³)"},
+  {id:178,cat:"図形",gr:"中1",q:"半径 3 cm の球の表面積を求めなさい。（πを使った答えで）",a:"36π",h1:"球の表面積=4πr²",h2:"4×π×9=?",exp:"S=4π×3²=36π (cm²)"},
+  {id:179,cat:"図形",gr:"中2",q:"二等辺三角形の頂角が 40° のとき、底角は何度か。",a:"70",h1:"二等辺三角形の底角は2つとも等しい",h2:"(180-40)÷2=?",exp:"(180-40)÷2=70°"},
+  {id:180,cat:"図形",gr:"中2",q:"平行四辺形の 1 つの角が 70° のとき、隣の角は何度か。",a:"110",h1:"平行四辺形の隣り合う角の和は180°",h2:"180-70=?",exp:"180-70=110°"},
+  {id:181,cat:"図形",gr:"中2",q:"長方形の対角線の長さが 5 cm、一辺が 3 cm のとき、もう一辺を求めなさい。",a:"4",h1:"ピタゴラスの定理：a²+b²=c²",h2:"3²+b²=5² → b²=?",exp:"9+b²=25 → b²=16 → b=4 (cm)"},
+  {id:182,cat:"図形",gr:"中2",q:"直角三角形の 2 辺が 6 cm と 8 cm のとき斜辺を求めなさい。",a:"10",h1:"ピタゴラスの定理：a²+b²=c²",h2:"6²+8²=36+64=? → c=?",exp:"c²=36+64=100 → c=10 (cm)"},
+  {id:183,cat:"図形",gr:"中1",q:"周の長さが 28 cm の正方形の 1 辺を求めなさい。",a:"7",h1:"正方形の周=4×1辺",h2:"28÷4=?",exp:"1辺=28÷4=7 (cm)"},
+  {id:184,cat:"図形",gr:"中1",q:"面積が 36 cm² の正方形の 1 辺を求めなさい。",a:"6",h1:"正方形の面積=(1辺)²",h2:"√36=?",exp:"1辺²=36 → 1辺=6 (cm)"},
+  {id:185,cat:"図形",gr:"中1",q:"底辺 10 cm、高さ 6 cm の三角形の面積を求めなさい。",a:"30",h1:"三角形の面積=底辺×高さ÷2",h2:"10×6÷2=?",exp:"S=10×6÷2=30 (cm²)"},
+  {id:186,cat:"図形",gr:"中1",q:"縦 5 cm、横 8 cm の長方形の周の長さを求めなさい。",a:"26",h1:"長方形の周=(縦+横)×2",h2:"(5+8)×2=?",exp:"L=(5+8)×2=26 (cm)"},
+  {id:187,cat:"図形",gr:"中1",q:"正三角形の 1 辺が 6 cm のとき、周の長さを求めなさい。",a:"18",h1:"正三角形の周=3×1辺",h2:"3×6=?",exp:"L=3×6=18 (cm)"},
+  {id:188,cat:"図形",gr:"中1",q:"底面の直径 8 cm、高さ 10 cm の円柱の体積を求めなさい。（πを使った答えで）",a:"160π",h1:"円柱の体積=πr²h。半径=直径÷2",h2:"r=4。π×16×10=?",exp:"V=π×4²×10=160π (cm³)"},
+  {id:189,cat:"図形",gr:"中2",q:"四角形の内角の和を答えなさい。（単位:°）",a:"360",h1:"n角形の内角の和=180(n-2)",h2:"180×(4-2)=?",exp:"180×2=360°"},
+  {id:190,cat:"図形",gr:"中2",q:"△ABCで ∠A=50°、∠B=70° のとき、∠Cの外角の大きさを求めなさい。",a:"120",h1:"三角形の外角は隣り合わない2つの内角の和",h2:"50+70=?",exp:"外角=50+70=120°"},
+
+  // ===== 確率 追加（27問、計30問）=====
+  {id:191,cat:"確率",gr:"中2",q:"1個のさいころを 1 回投げるとき、3 の倍数が出る確率を求めなさい。（分数で）",a:"1/3",h1:"3の倍数は3,6の2通り。全体は6通り",h2:"2÷6=?",exp:"P=2/6=1/3"},
+  {id:192,cat:"確率",gr:"中2",q:"1 から 10 の整数から 1 つ選ぶとき、奇数が出る確率を求めなさい。（分数で）",a:"1/2",h1:"奇数は1,3,5,7,9の5通り。全体は10通り",h2:"5÷10=?",exp:"P=5/10=1/2"},
+  {id:193,cat:"確率",gr:"中2",q:"赤玉 3 個、青玉 2 個の袋から 1 個取り出すとき、赤玉が出る確率を求めなさい。（分数で）",a:"3/5",h1:"全体は5個、赤玉は3個",h2:"3÷5=?",exp:"P=3/5"},
+  {id:194,cat:"確率",gr:"中2",q:"2 枚のコインを投げたとき、1 枚が表、1 枚が裏になる確率を求めなさい。（分数で）",a:"1/2",h1:"全体は4通り（表表・表裏・裏表・裏裏）",h2:"表裏+裏表=2通り。2÷4=?",exp:"P=2/4=1/2"},
+  {id:195,cat:"確率",gr:"中2",q:"1 個のさいころを 1 回投げるとき、4 以上が出る確率を求めなさい。（分数で）",a:"1/2",h1:"4以上は4,5,6の3通り",h2:"3÷6=?",exp:"P=3/6=1/2"},
+  {id:196,cat:"確率",gr:"中2",q:"1 から 6 のさいころを 1 回投げるとき、7 が出る確率を求めなさい。",a:"0",h1:"1から6しかないので7は絶対出ない",h2:"7が出る場合の数は？",exp:"7が出る場合の数=0なので P=0"},
+  {id:197,cat:"確率",gr:"中2",q:"必ず起こる事象の確率を答えなさい。",a:"1",h1:"絶対に起こるならすべての場合が該当する",h2:"全体÷全体=?",exp:"必ず起こる事象の確率=1"},
+  {id:198,cat:"確率",gr:"中2",q:"1 個のさいころを 1 回投げるとき、偶数が出ない確率を求めなさい。（分数で）",a:"1/2",h1:"余事象を使う：P(偶数でない)=1-P(偶数)",h2:"P(偶数)=1/2 なので？",exp:"1-1/2=1/2"},
+  {id:199,cat:"確率",gr:"中2",q:"赤・青・黄の 3 色カードから 1 枚引くとき、赤か青が出る確率を求めなさい。（分数で）",a:"2/3",h1:"赤か青は2通り、全体は3通り",h2:"2÷3=?",exp:"P=2/3"},
+  {id:200,cat:"確率",gr:"中2",q:"1 から 5 の数が書かれたカードから 1 枚引くとき、3 以下が出る確率を求めなさい。（分数で）",a:"3/5",h1:"3以下は1,2,3の3通り",h2:"3÷5=?",exp:"P=3/5"},
+  {id:201,cat:"確率",gr:"中2",q:"赤玉 2 個、白玉 3 個の袋から 1 個取り出すとき、白玉が出る確率を求めなさい。（分数で）",a:"3/5",h1:"全体は5個、白玉は3個",h2:"3÷5=?",exp:"P=3/5"},
+  {id:202,cat:"確率",gr:"中2",q:"2 個のさいころを同時に投げるとき、両方とも 1 が出る確率を求めなさい。（分数で）",a:"1/36",h1:"全体の場合の数は6×6=36",h2:"両方1は1通り。1÷36=?",exp:"P=1/36"},
+  {id:203,cat:"確率",gr:"中2",q:"2 個のさいころを同時に投げるとき、目の和が 7 になる確率を求めなさい。（分数で）",a:"1/6",h1:"和が7になる組み合わせを列挙する",h2:"(1,6)(2,5)(3,4)(4,3)(5,2)(6,1)=6通り。6÷36=?",exp:"P=6/36=1/6"},
+  {id:204,cat:"確率",gr:"中2",q:"2 個のさいころを同時に投げるとき、目の和が 10 以上になる確率を求めなさい。（分数で）",a:"1/6",h1:"和10,11,12の組み合わせを数える",h2:"10:(4,6)(5,5)(6,4)、11:(5,6)(6,5)、12:(6,6)=6通り",exp:"P=6/36=1/6"},
+  {id:205,cat:"確率",gr:"中2",q:"A、B、C の 3 人を 1 列に並べるとき、A が先頭になる確率を求めなさい。（分数で）",a:"1/3",h1:"全体の並び方は3!=6通り",h2:"Aが先頭のときはB,Cの並び=2通り",exp:"P=2/6=1/3"},
+  {id:206,cat:"確率",gr:"中2",q:"A、B、C、D の 4 枚のカードから 2 枚選ぶとき、A と B が両方選ばれる確率を求めなさい。（分数で）",a:"1/6",h1:"全体は C(4,2)=6通り",h2:"AとBが選ばれるのは1通り",exp:"P=1/6"},
+  {id:207,cat:"確率",gr:"中2",q:"1 から 4 のカードから 1 枚引くとき、2 の倍数が出る確率を求めなさい。（分数で）",a:"1/2",h1:"2の倍数は2,4の2通り。全体は4通り",h2:"2÷4=?",exp:"P=2/4=1/2"},
+  {id:208,cat:"確率",gr:"中2",q:"さいころを 1 回投げて 5 以上が出る確率を求めなさい。（分数で）",a:"1/3",h1:"5以上は5,6の2通り",h2:"2÷6=?",exp:"P=2/6=1/3"},
+  {id:209,cat:"確率",gr:"中2",q:"さいころを 1 回投げて 3 の目が出ない確率を求めなさい。（分数で）",a:"5/6",h1:"余事象：P(3でない)=1-P(3)",h2:"P(3)=1/6。1-1/6=?",exp:"P=1-1/6=5/6"},
+  {id:210,cat:"確率",gr:"中2",q:"赤玉 1 個、青玉 1 個、黄玉 1 個の袋から 1 個取り出すとき、青玉が出る確率を求めなさい。（分数で）",a:"1/3",h1:"全体は3通り、青玉は1通り",h2:"1÷3=?",exp:"P=1/3"},
+  {id:211,cat:"確率",gr:"中2",q:"2 枚のコインを投げるとき、少なくとも 1 枚が表になる確率を求めなさい。（分数で）",a:"3/4",h1:"余事象：P(少なくとも1枚表)=1-P(全部裏)",h2:"P(全部裏)=1/4。1-1/4=?",exp:"P=1-1/4=3/4"},
+  {id:212,cat:"確率",gr:"中2",q:"1 から 10 の整数から 1 つ選ぶとき、3 の倍数が出る確率を求めなさい。（分数で）",a:"3/10",h1:"3の倍数は3,6,9の3通り",h2:"3÷10=?",exp:"P=3/10"},
+  {id:213,cat:"確率",gr:"中2",q:"1 から 6 のさいころを 1 回投げるとき、素数が出る確率を求めなさい。（分数で）",a:"1/2",h1:"素数は2,3,5の3通り（1は素数でない）",h2:"3÷6=?",exp:"P=3/6=1/2"},
+  {id:214,cat:"確率",gr:"中2",q:"当たりくじ 3 本、はずれくじ 7 本の合計 10 本から 1 本引くとき、当たる確率を求めなさい。（分数で）",a:"3/10",h1:"全体10本、当たり3本",h2:"3÷10=?",exp:"P=3/10"},
+  {id:215,cat:"確率",gr:"中2",q:"さいころを 2 回投げて 2 回とも偶数が出る確率を求めなさい。（分数で）",a:"1/4",h1:"1回で偶数が出る確率は1/2",h2:"1/2×1/2=?",exp:"P=1/2×1/2=1/4"},
+  {id:216,cat:"確率",gr:"中2",q:"赤玉 2 個、白玉 2 個の袋から 2 個同時に取り出すとき、2 個とも赤玉の確率を求めなさい。（分数で）",a:"1/6",h1:"全体はC(4,2)=6通り、赤2個はC(2,2)=1通り",h2:"1÷6=?",exp:"P=1/6"},
+  {id:217,cat:"確率",gr:"中2",q:"さいころ 1 個を投げて、出た目が 2 の倍数または 3 の倍数である確率を求めなさい。（分数で）",a:"2/3",h1:"2の倍数{2,4,6}と3の倍数{3,6}を合わせる（重複に注意）",h2:"合わせると{2,3,4,6}の4通り。4÷6=?",exp:"{2,3,4,6}の4通り。P=4/6=2/3"},
+];
+
+// ===== ランク定義 =====
+var RANKS = [
+  {name:"🔩 計算見習い",   xp:0},
+  {name:"📐 数式ルーキー", xp:50},
+  {name:"🔢 整数ファイター",xp:150},
+  {name:"⚖️ 方程式の剣士", xp:300},
+  {name:"📈 関数の探偵",   xp:500},
+  {name:"🔷 図形の騎士",   xp:800},
+  {name:"🎲 確率の魔術師", xp:1200},
+  {name:"🧮 代数のナイト", xp:1800},
+  {name:"💡 証明の賢者",   xp:2500},
+  {name:"🌀 連立のマスター",xp:3500},
+  {name:"⚡ 数学エース",   xp:5000},
+  {name:"🔥 方程式キング", xp:7000},
+  {name:"🌌 無限の探究者", xp:10000},
+  {name:"💫 数学レジェンド",xp:15000},
+  {name:"🏆 数学の神",     xp:20000}
+];
+
+// ===== ボス定義 =====
+var BOSSES = [
+  {emoji:"🐊", name:"正負のワニ Lv.1",   desc:"正負の数を守るぬめりワニ！",       hp:8},
+  {emoji:"🦊", name:"文字式キツネ Lv.2", desc:"xとyを操る狡猾なキツネ！",         hp:10},
+  {emoji:"🐯", name:"方程式タイガー Lv.3",desc:"一次方程式の暴れ虎！",             hp:10},
+  {emoji:"🦅", name:"関数イーグル Lv.4", desc:"一次関数を駆る猛禽！",             hp:12},
+  {emoji:"🐉", name:"連立ドラゴン Lv.5", desc:"連立方程式の最凶ドラゴン！",       hp:12},
+  {emoji:"🤖", name:"数学キング FINAL",  desc:"全分野を統べる最終ボス！",         hp:15}
+];
+
+// ===== Web Audio =====
+var AC_ = window.AudioContext || window.webkitAudioContext;
+var ac_ = null, muted_ = false;
+function ia_() { if(!ac_) ac_ = new AC_(); if(ac_.state==='suspended') ac_.resume(); }
+function ps_(f,d,tp,v,dl) {
+  tp=tp||'sine'; v=v||0.25; dl=dl||0;
+  if(muted_||!ac_) return;
+  try {
+    var o=ac_.createOscillator(), g=ac_.createGain();
+    o.connect(g); g.connect(ac_.destination);
+    o.type=tp; o.frequency.value=f;
+    g.gain.setValueAtTime(v,ac_.currentTime+dl);
+    g.gain.exponentialRampToValueAtTime(0.001,ac_.currentTime+dl+d);
+    o.start(ac_.currentTime+dl);
+    o.stop(ac_.currentTime+dl+d);
+  } catch(e) {}
+}
+function sfxOK()    { ps_(523,0.1); ps_(659,0.18,0,0,0.08); ps_(784,0.25,0,0,0.16); }
+function sfxNG()    { ps_(200,0.15,'square',0.12); ps_(150,0.2,'square',0.1,0.1); }
+function sfxCombo() { ps_(880,0.1); ps_(1047,0.1,0,0,0.07); ps_(1319,0.15,0,0,0.14); }
+function sfxLvl()   { [523,659,784,1047].forEach(function(f,i){ps_(f,0.3,0,0.2,i*0.12);}); }
+function sfxBoss()  { [200,250,300,200].forEach(function(f,i){ps_(f,0.3,'sawtooth',0.15,i*0.15);}); }
+function sfxBD()    { [784,880,988,1047,1319].forEach(function(f,i){ps_(f,0.35,0,0.2,i*0.1);}); }
+function toggleMute() {
+  muted_ = !muted_;
+  document.getElementById('muteB').textContent = muted_ ? '🔇 音OFF' : '🔊 音ON';
+}
+
+// ===== ゲーム状態 =====
+var state = {
+  xp:0, rank:0, combo:0, maxCombo:0,
+  bossIdx:0, bossHp:0, bossMaxHp:0,
+  queue:[], cur:0, wrongs:[],
+  hint1Used:false, hint2Used:false,
+  answered:false, correct:0, total:0,
+  mode:'all', selCats:null, isReview:false,
+  startTime:0
+};
+
+// localStorage キー（汎用版）
+var LS_KEY = 'math_battle_dojo_wrongs';
+
+// カテゴリ一覧を動的に生成
+var CATS = (function() {
+  var seen = {}, result = [];
+  QUESTIONS.forEach(function(q) { if(!seen[q.cat]) { seen[q.cat]=1; result.push(q.cat); } });
+  return result;
+})();
+
+// カテゴリ絵文字マップ
+var CAT_EMOJI = {
+  '正負の数':'±', '文字と式':'🔤', '一次方程式':'⚖️', '比例・反比例':'📈',
+  '平面図形':'🔷', '空間図形':'📦', '資料の活用':'📊',
+  '式の計算':'✏️', '連立方程式':'🔗', '不等式':'↔️', '一次関数':'📉',
+  '平行と合同':'📐', '確率':'🎲', '場合の数':'🔢'
+};
+function catEmoji(cat) { return CAT_EMOJI[cat] || '📚'; }
+
+// ===== 初期化 =====
+function init() {
+  var grid = document.getElementById('menuGrid');
+  grid.innerHTML = '';
+  CATS.forEach(function(cat) {
+    var cnt = QUESTIONS.filter(function(q){ return q.cat===cat; }).length;
+    var div = document.createElement('div');
+    div.className = 'menu-card active';
+    div.id = 'cat_' + cat;
+    div.innerHTML =
+      '<div class="mc-emoji">' + catEmoji(cat) + '</div>' +
+      '<div class="mc-name">' + cat + '</div>' +
+      '<div class="mc-cnt">' + cnt + '問</div>';
+    div.onclick = (function(c){ return function(){ toggleCat(c); }; })(cat);
+    grid.appendChild(div);
+  });
+  state.selCats = new Set(CATS);
+}
+
+function toggleCat(cat) {
+  var el = document.getElementById('cat_' + cat);
+  if(state.selCats.has(cat)) {
+    state.selCats.delete(cat);
+    el.classList.remove('active');
+  } else {
+    state.selCats.add(cat);
+    el.classList.add('active');
+  }
+  updateSelLabel();
+}
+
+function updateSelLabel() {
+  var n = state.selCats.size;
+  document.getElementById('selLabel').textContent =
+    n === CATS.length ? '全分野を選択中' : n + '分野を選択中';
+}
+
+function setMode(m) {
+  state.mode = m;
+  document.getElementById('modeAll').classList.toggle('active', m==='all');
+  document.getElementById('modeWeak').classList.toggle('active', m==='weak');
+}
+
+function shuffle(arr) {
+  var a = arr.slice();
+  for(var i=a.length-1; i>0; i--) {
+    var j = Math.floor(Math.random()*(i+1));
+    var t = a[i]; a[i]=a[j]; a[j]=t;
+  }
+  return a;
+}
+
+// ===== ゲーム開始 =====
+function startQuiz() {
+  ia_();
+  var pool;
+  if(state.mode === 'weak') {
+    pool = getWeakQ();
+    if(!pool.length) { alert('まだ間違えた問題がありません！'); return; }
+  } else {
+    pool = QUESTIONS.filter(function(q){ return state.selCats.has(q.cat); });
+    if(!pool.length) { alert('分野を1つ以上選んでください。'); return; }
+  }
+  state.queue = shuffle(pool);
+  state.cur=0; state.wrongs=[]; state.correct=0; state.total=state.queue.length;
+  state.answered=false; state.isReview=false;
+  state.combo=0; state.maxCombo=0;
+  state.startTime = Date.now();
+  state.bossIdx = 0;
+  loadBoss(0);
+  showScreen('quizScreen');
+  switchBgVideo('quiz');
+  renderQ();
+}
+
+// 苦手問題取得
+function getWeakQ() {
+  var saved = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  return QUESTIONS.filter(function(q){ return saved.indexOf(q.id) !== -1; });
+}
+function saveWrongs(wrongs) {
+  var saved = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  wrongs.forEach(function(q){ if(saved.indexOf(q.id)===-1) saved.push(q.id); });
+  localStorage.setItem(LS_KEY, JSON.stringify(saved));
+}
+function clearWrong(id) {
+  var saved = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  saved = saved.filter(function(x){ return x!==id; });
+  localStorage.setItem(LS_KEY, JSON.stringify(saved));
+}
+
+// ===== ボス管理 =====
+function loadBoss(idx) {
+  if(idx >= BOSSES.length) idx = BOSSES.length - 1;
+  var b = BOSSES[idx];
+  state.bossIdx = idx;
+  state.bossHp = b.hp; state.bossMaxHp = b.hp;
+  document.getElementById('bossEmoji').textContent = b.emoji;
+  document.getElementById('bossName').textContent  = b.name;
+  document.getElementById('bossDesc').textContent  = b.desc;
+  updateBossHp();
+  sfxBoss();
+}
+function updateBossHp() {
+  var pct = Math.max(0, state.bossHp / state.bossMaxHp * 100);
+  document.getElementById('bossHpBar').style.width = pct + '%';
+  document.getElementById('bossHpNum').textContent = state.bossHp;
+  document.getElementById('bossHpMax').textContent = state.bossMaxHp;
+}
+
+// ===== 問題表示 =====
+function renderQ() {
+  if(state.cur >= state.queue.length) { finishQuiz(); return; }
+  var q = state.queue[state.cur];
+  state.answered=false; state.hint1Used=false; state.hint2Used=false;
+
+  document.getElementById('qCat').textContent   = catEmoji(q.cat) + ' ' + q.cat;
+  document.getElementById('qNum').textContent   = (state.cur+1) + '/' + state.total;
+  document.getElementById('qText').textContent  = q.q;
+  document.getElementById('qSub').textContent   = q.gr + ' レベル';
+  var inp = document.getElementById('ansInput');
+  inp.value=''; inp.className='ans-input'; inp.disabled=false;
+  document.getElementById('checkBtn').style.display='';
+  document.getElementById('nextBtn').style.display='none';
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('feedback').innerHTML='';
+  document.getElementById('hint1Text').className='hint-text';
+  document.getElementById('hint2Text').className='hint-text';
+
+  var prog = (state.cur / state.total) * 100;
+  document.getElementById('progBar').style.width = prog + '%';
+  document.getElementById('progLabel').textContent = state.cur + '/' + state.total;
+
+  setTimeout(function(){ document.getElementById('ansInput').focus(); }, 100);
+}
+
+// ===== 答え合わせ =====
+function normalizeAns(s) {
+  return s.trim()
+    .replace(/\s+/g,'')
+    .replace(/＝/g,'=')
+    .replace(/，/g,',')
+    .replace(/　/g,'')
+    .toLowerCase();
+}
+
+function checkAnswer() {
+  ia_();
+  if(state.answered) return;
+  var q = state.queue[state.cur];
+  var userAns    = normalizeAns(document.getElementById('ansInput').value);
+  var correctAns = normalizeAns(q.a);
+  var correct    = (userAns === correctAns);
+
+  state.answered = true;
+  document.getElementById('ansInput').disabled = true;
+  document.getElementById('checkBtn').style.display = 'none';
+  document.getElementById('nextBtn').style.display  = 'block';
+
+  if(correct) {
+    sfxOK();
+    switchBgVideo('correct');
+    document.getElementById('ansInput').classList.add('ok');
+    state.correct++;
+    state.combo++;
+    if(state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+    var xpGain = 10;
+    if(!state.hint1Used && !state.hint2Used) xpGain += 5; // ノーヒントボーナス
+    if(state.combo >= 5)  xpGain += 5;
+    if(state.combo >= 10) { xpGain += 5; sfxCombo(); }
+    if(state.combo >= 3)  showComboFlash('🔥 ' + state.combo + ' COMBO!');
+
+    addXP(xpGain);
+    clearWrong(q.id);
+
+    // ボスダメージ
+    state.bossHp = Math.max(0, state.bossHp - 1);
+    updateBossHp();
+    if(state.bossHp <= 0) {
+      sfxBD();
+      switchBgVideo('clear');
+      var defeated = BOSSES[state.bossIdx];
+      setTimeout(function(){
+        showComboFlash('💥 ' + defeated.emoji + ' 撃破！');
+        var nextIdx = state.bossIdx + 1;
+        if(nextIdx < BOSSES.length) {
+          setTimeout(function(){ loadBoss(nextIdx); switchBgVideo('quiz'); }, 1800);
+        }
+      }, 300);
+    }
+
+    var fb = document.getElementById('feedback');
+    fb.className = 'feedback ok';
+    fb.innerHTML =
+      '<strong>✅ 正解！ +' + xpGain + 'XP</strong>' +
+      (state.combo >= 2 ? ' <span style="color:var(--gold)">' + state.combo + 'コンボ！</span>' : '') +
+      '<div class="exp">📖 ' + q.exp + '</div>';
+  } else {
+    sfxNG();
+    switchBgVideo('wrong');
+    document.getElementById('ansInput').classList.add('ng');
+    state.combo = 0;
+    state.wrongs.push(q);
+    saveWrongs([q]);
+
+    var fb2 = document.getElementById('feedback');
+    fb2.className = 'feedback ng';
+    fb2.innerHTML =
+      '<strong>❌ 不正解… 正解: <span style="color:var(--green)">' + q.a + '</span></strong>' +
+      '<div class="exp">📖 ' + q.exp + '</div>';
+  }
+
+  document.getElementById('comboVal').textContent = state.combo;
+  document.getElementById('xpVal').textContent    = state.xp;
+}
+
+function showComboFlash(txt) {
+  var el = document.getElementById('comboFlash');
+  el.textContent = txt;
+  el.style.animation = 'none';
+  void el.offsetWidth; // reflow
+  el.style.animation = 'comboAnim 1s ease forwards';
+}
+
+function nextQ() { switchBgVideo('quiz'); state.cur++; renderQ(); }
+
+// ===== XP & ランク =====
+function addXP(n) {
+  var prevRank = state.rank;
+  state.xp += n;
+  var newRank = 0;
+  for(var i=RANKS.length-1; i>=0; i--) {
+    if(state.xp >= RANKS[i].xp) { newRank=i; break; }
+  }
+  state.rank = newRank;
+  if(newRank > prevRank) {
+    sfxLvl();
+    document.getElementById('luRank').textContent = RANKS[newRank].name;
+    document.getElementById('lvlupOverlay').style.display = 'flex';
+  }
+  updateRankUI();
+}
+
+function updateRankUI() {
+  var cur  = RANKS[state.rank];
+  var next = state.rank < RANKS.length-1 ? RANKS[state.rank+1] : null;
+  document.getElementById('rankVal').textContent  = cur.name;
+  document.getElementById('rankName').textContent = cur.name;
+  document.getElementById('xpVal').textContent    = state.xp;
+  var pct = next ? Math.min(100, (state.xp-cur.xp)/(next.xp-cur.xp)*100) : 100;
+  document.getElementById('xpBar').style.width    = pct + '%';
+  document.getElementById('xpToNext').textContent = next ? (next.xp-state.xp)+' XPで昇格' : 'MAX RANK';
+}
+
+function closeLvlUp() { document.getElementById('lvlupOverlay').style.display='none'; }
+
+// ===== ヒント =====
+function showHint(n) {
+  ia_();
+  var q = state.queue[state.cur];
+  if(n===1 && !state.hint1Used) {
+    state.hint1Used = true;
+    state.xp = Math.max(0, state.xp-3);
+    document.getElementById('hint1Text').textContent = '💡 ' + q.h1;
+    document.getElementById('hint1Text').classList.add('show');
+    updateRankUI();
+  } else if(n===2 && !state.hint2Used) {
+    state.hint2Used = true;
+    state.xp = Math.max(0, state.xp-2);
+    document.getElementById('hint2Text').textContent = '🔍 ' + q.h2;
+    document.getElementById('hint2Text').classList.add('show');
+    updateRankUI();
+  }
+}
+
+// ===== 結果画面 =====
+function finishQuiz() {
+  var elapsed = Math.round((Date.now() - state.startTime) / 1000);
+  var pct     = Math.round(state.correct / state.total * 100);
+
+  // 絵文字・ラベルを成績に合わせて変更
+  var emoji = pct===100 ? '🏆' : pct>=80 ? '🎉' : pct>=60 ? '😊' : '💪';
+  var label = pct===100 ? 'パーフェクト！素晴らしい！' : pct>=80 ? 'クリア！よく頑張った！' : 'クリア！お疲れさまでした';
+
+  document.getElementById('sumEmoji').textContent  = emoji;
+  document.getElementById('sumScore').textContent  = pct + '点';
+  document.getElementById('sumLabel').textContent  = label;
+  document.getElementById('sumXP').textContent     = state.xp;
+  document.getElementById('sumCombo').textContent  = state.maxCombo;
+  document.getElementById('sumTime').textContent   = elapsed + '秒';
+
+  var wl = document.getElementById('weakList');
+  if(state.wrongs.length) {
+    wl.innerHTML = '<h3 style="color:var(--accent2)">🔴 間違えた問題 (' + state.wrongs.length + '問)</h3>';
+    state.wrongs.forEach(function(q) {
+      var d = document.createElement('div');
+      d.className = 'weak-item';
+      var qText = q.q.replace(/\n/g,' ');
+      if(qText.length>45) qText = qText.substring(0,45)+'…';
+      d.innerHTML =
+        '<div class="wi-q">' + q.cat + '：' + qText + '</div>' +
+        '<div class="wi-a">正解: ' + q.a + '</div>';
+      wl.appendChild(d);
+    });
+  } else {
+    wl.innerHTML = '<h3 style="color:var(--green)">🎉 全問正解！パーフェクト！</h3>';
+  }
+  showScreen('summaryScreen');
+  switchBgVideo('clear');
+}
+
+// 間違い復習
+function startReview() {
+  if(!state.wrongs.length) { alert('間違えた問題がありません！'); return; }
+  state.queue = shuffle(state.wrongs);
+  state.cur=0; state.correct=0; state.total=state.queue.length;
+  state.answered=false; state.isReview=true;
+  state.combo=0; state.maxCombo=0;
+  state.startTime = Date.now();
+  loadBoss(state.bossIdx);
+  showScreen('quizScreen');
+  switchBgVideo('quiz');
+  renderQ();
+}
+
+function showMenu() { showScreen('menuScreen'); switchBgVideo('title'); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  var backBtn = document.getElementById('backBtn');
+  if (backBtn) backBtn.style.display = (id === 'quizScreen') ? 'block' : 'none';
+}
+
+// ===== キーボード操作 =====
+document.addEventListener('keydown', function(e) {
+  if(e.key === 'Enter') {
+    if(!state.answered) {
+      checkAnswer();
+    } else if(document.getElementById('nextBtn').style.display !== 'none') {
+      nextQ();
+    }
+  }
+  // Escape でレベルアップ画面を閉じる
+  if(e.key === 'Escape') {
+    if(document.getElementById('lvlupOverlay').style.display === 'flex') closeLvlUp();
+  }
+});
+
+// ===== 背景ステート切り替え（CSS グラデーション）=====
+// Veo動画が準備できたら <video> 差し替えに対応予定
+var _curBgState = '';
+var BG_STATES = ['title', 'quiz', 'correct', 'wrong', 'clear'];
+function switchBgVideo(stateName) {
+  if (_curBgState === stateName) return;
+  if (BG_STATES.indexOf(stateName) === -1) return;
+  _curBgState = stateName;
+  var el = document.getElementById('sceneBg');
+  if (!el) return;
+  BG_STATES.forEach(function(s) { el.classList.remove('state-' + s); });
+  el.classList.add('state-' + stateName);
+}
+
+// ===== 起動 =====
+init();
+updateRankUI();
+switchBgVideo('title');
+</script>
+</body>
+</html>
